@@ -37,7 +37,7 @@ type Worker struct {
 type Api interface {
 
 	// Start starts the Cadence client
-	Start(ctx context.Context, config *Config) error
+	Start(ctx context.Context) error
 
 	// Shutdown stops the Cadence client
 	// This is a blocking call and done channel is used to notify when the shutdown is complete

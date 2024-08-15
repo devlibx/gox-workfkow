@@ -1,0 +1,19 @@
+worker_groups:
+  worker_group_1:
+    domain: ${TASK_LIST}
+    host_port: ${HOST}
+    name: server_1
+    worker:
+      - task_list: server_1_ts_1
+        worker_count: 3
+      - task_list: server_1_ts_2
+        worker_count: 3
+  worker_group_2:
+    domain: ${TASK_LIST}-harishbohara
+    host_port: ${HOST}
+    name: server_2
+    worker:
+      - task_list: server_2_ts_1
+        worker_count: 3
+      - task_list: server_2_ts_2
+        worker_count: 3

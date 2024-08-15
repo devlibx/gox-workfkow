@@ -19,14 +19,14 @@ type cadenceWrapperImpl struct {
 	zapLogger    *zap.Logger
 }
 
-func (wrapper *cadenceWrapperImpl) Start(ctx context.Context, config *Config) error {
-	if config.Disabled {
+func (wrapper *cadenceWrapperImpl) Start(ctx context.Context) error {
+	if wrapper.config.Disabled {
 		slog.Warn("cadence is disabled - will not start any worker")
 		return nil
 	}
 
 	// The errors in the cadence logs are not very helpful. So we are disabling ing stack trace
-	if !config.EnableErrorStackInCadenceLog && wrapper.zapLogger == nil {
+	if !wrapper.config.EnableErrorStackInCadenceLog && wrapper.zapLogger == nil {
 		var e error
 		c := zap.NewProductionConfig()
 		c.EncoderConfig.StacktraceKey = ""
@@ -37,7 +37,7 @@ func (wrapper *cadenceWrapperImpl) Start(ctx context.Context, config *Config) er
 	}
 
 	wrapper.workerGroups = make([]*cadenceWorker, 0)
-	for name, wg := range config.WorkerGroups {
+	for name, wg := range wrapper.config.WorkerGroups {
 		wg.Name = name
 
 		if wg.Disabled {

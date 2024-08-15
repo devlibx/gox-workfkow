@@ -2,9 +2,11 @@ package main
 
 import (
 	"context"
+	_ "embed"
 	"fmt"
 	"github.com/devlibx/gox-base"
 	"github.com/devlibx/gox-base/errors"
+	"github.com/devlibx/gox-base/serialization"
 	"github.com/google/uuid"
 	"go.uber.org/cadence/activity"
 	"go.uber.org/cadence/client"
@@ -15,62 +17,38 @@ import (
 	"time"
 )
 
+//go:embed config.yaml
+var config string
+
 func main() {
 
-	c := cadence.Config{
-		WorkerGroups: map[string]cadence.WorkerGroup{
-			"worker_group_1": {
-				Disabled: false,
-				Name:     "server_1",
-				Domain:   os.Getenv("TASK_LIST"),
-				HostPort: os.Getenv("HOST"),
-				Workers: []*cadence.Worker{
-					{TaskList: "server_1_ts_1", WorkerCount: 3},
-					{TaskList: "server_1_ts_2", WorkerCount: 3},
-				},
-			},
-			"worker_group_2": {
-				Name:     "server_2",
-				Domain:   os.Getenv("TASK_LIST") + "-harishbohara",
-				HostPort: os.Getenv("HOST"),
-				Workers: []*cadence.Worker{
-					{TaskList: "server_2_ts_1", WorkerCount: 3},
-					{TaskList: "server_2_ts_2", WorkerCount: 3},
-				},
-			},
-		},
+	// Read config file into config object
+	config = os.ExpandEnv(config)
+	c := cadence.Config{}
+	err := serialization.ReadYamlFromString(config, &c)
+	if err != nil {
+		panic(err)
 	}
 
+	// Make sure to register workflow and activity before you start the cadence client
 	we := &workflowExample{}
 	workflow.Register(we.RunWorkflow)
 	activity.Register(we.RunActivity)
 
-	/*// Create a custom configuration
-	config := zap.NewProductionConfig()
-	config.EncoderConfig.StacktraceKey = ""                // Disable stack trace key
-	config.Level = zap.NewAtomicLevelAt(zapcore.InfoLevel) // Set log level
-	// logger, err := zap.NewProduction()
-	logger, err := config.Build()
-	if err != nil {
-		panic(err)
-	}*/
-
+	// Create a new cadence client
 	workflowApi, err := cadence.NewCadenceClient(gox.NewCrossFunction(), &c)
 	if err != nil {
 		panic(err)
 	}
 
-	err = workflowApi.Start(context.Background(), &c)
+	// Make sure to start it - mandatory to do it
+	err = workflowApi.Start(context.Background())
 	if err != nil {
 		panic(err)
 	}
 	we.cadenceApi = workflowApi
 
-	for i := 0; i < 1; i++ {
-		we.RunExample()
-		time.Sleep(10 * time.Millisecond)
-	}
-
+	we.RunExample()
 	time.Sleep(60 * time.Hour)
 }
 
@@ -87,20 +65,20 @@ func (w *workflowExample) RunExample() {
 		DecisionTaskStartToCloseTimeout: 10 * time.Minute,
 	}
 
-	result, err := w.cadenceApi.StartWorkflow(context.Background(), workflowOptions, w.RunWorkflow, "some-args-"+id)
+	_, err := w.cadenceApi.StartWorkflow(context.Background(), workflowOptions, w.RunWorkflow, "some-args-"+id)
 	if err != nil {
 		panic(err)
 	}
-	slog.Info("-->>> workflow started - ", slog.Any("result", result))
 }
 
 func (w *workflowExample) RunWorkflow(ctx workflow.Context, input string) error {
 
+	// Make sure to put correct retries
 	retryPolicy := &workflow.RetryPolicy{
-		InitialInterval:    time.Second, // Initial backoff interval
-		BackoffCoefficient: 2.0,         // Exponential backoff coefficient
-		MaximumAttempts:    100,         // Maximum number of attempts
-		MaximumInterval:    5 * time.Second,
+		InitialInterval:    time.Second,
+		BackoffCoefficient: 1.1,
+		MaximumAttempts:    3,
+		MaximumInterval:    2 * time.Second,
 	}
 
 	registerActivityOption := workflow.ActivityOptions{
@@ -119,12 +97,10 @@ func (w *workflowExample) RunWorkflow(ctx workflow.Context, input string) error 
 		slog.Info("activity result - ", slog.Any("result", result))
 		return nil
 	}
-
 	return nil
 }
 
 func (w *workflowExample) RunActivity(ctx context.Context, input string) (gox.StringObjectMap, error) {
 	slog.Info("-->>>> Running activity - ", slog.String("input", input))
 	return gox.StringObjectMap{"status": "ok", "id": input}, fmt.Errorf("some bad error in printf %w", errors.New("some bad error"))
-	//errors.New("some bad error")
 }
