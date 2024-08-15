@@ -82,6 +82,15 @@ func (wrapper *cadenceWrapperImpl) StartWorkflow(ctx context.Context, options cl
 			return cadenceWorkerObj.cadenceClient.StartWorkflow(ctx, options, workflowFunc, args...)
 		}
 	}
+	return nil, errors.New(`task list not registered in application config to run this workflow: %s`, options.TaskList)
+}
+
+func (wrapper *cadenceWrapperImpl) ExecuteWorkflow(ctx context.Context, options client.StartWorkflowOptions, workflow interface{}, args ...interface{}) (client.WorkflowRun, error) {
+	for _, cadenceWorkerObj := range wrapper.workerGroups {
+		if _, ok := cadenceWorkerObj.cadenceWorkers[options.TaskList]; ok {
+			return cadenceWorkerObj.cadenceClient.ExecuteWorkflow(ctx, options, workflow, args...)
+		}
+	}
 	return nil, errors.New("task list not registered in application config to run this workflow: %s", options.TaskList)
 }
 

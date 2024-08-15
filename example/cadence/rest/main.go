@@ -210,7 +210,7 @@ func (w *workflowBaseService) getHomeDataWorkflow(ctx workflow.Context, request 
 // getHomeDataActivity simulates an api call to get home data - which can take time
 func (w *workflowBaseService) getHomeDataActivity(ctx context.Context, request requestPojo) (*responsePojo, error) {
 	time.Sleep(time.Duration(request.TimeInMs) * time.Millisecond)
-	if request.Counter == 2 {
+	if request.Counter == 5 {
 		return &responsePojo{Status: "ok", Counter: request.Counter}, nil
 	} else {
 		return nil, fmt.Errorf("simulated error - counter=%d", request.Counter)

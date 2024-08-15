@@ -49,6 +49,9 @@ type Api interface {
 	// StartWorkflow starts a new workflow execution
 	StartWorkflow(ctx context.Context, options client.StartWorkflowOptions, workflowFunc interface{}, args ...interface{}) (*workflow.Execution, error)
 
+	// ExecuteWorkflow starts a new workflow execution and return a WorkflowRun
+	ExecuteWorkflow(ctx context.Context, options client.StartWorkflowOptions, workflow interface{}, args ...interface{}) (client.WorkflowRun, error)
+
 	// CancelWorkflow cancels a workflow execution
 	//
 	// IMPORTANT REQUIREMENT:
