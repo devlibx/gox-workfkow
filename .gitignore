@@ -1,0 +1,7 @@
+.idea
+
+# Vendor packages
+vendor/
+
+# Go Dependency Management Tool
+go.sum
