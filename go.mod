@@ -1,4 +1,4 @@
-module gox-workfkow
+module github.com/devlibx/gox-workfkow
 
 go 1.21
 
@@ -8,6 +8,7 @@ require (
 	github.com/opentracing/opentracing-go v1.2.0
 	go.uber.org/cadence v1.2.9
 	go.uber.org/yarpc v1.55.0
+	go.uber.org/zap v1.23.0
 )
 
 require (
@@ -46,7 +47,6 @@ require (
 	go.uber.org/multierr v1.6.0 // indirect
 	go.uber.org/net/metrics v1.3.0 // indirect
 	go.uber.org/thriftrw v1.25.0 // indirect
-	go.uber.org/zap v1.23.0 // indirect
 	golang.org/x/exp/typeparams v0.0.0-20220218215828-6cf2b201936e // indirect
 	golang.org/x/lint v0.0.0-20201208152925-83fdc39ff7b5 // indirect
 	golang.org/x/mod v0.8.0 // indirect
