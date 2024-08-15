@@ -22,6 +22,11 @@ var config string
 
 func main() {
 
+	// Make sure to set the env variables
+	if os.Getenv("HOST") == "" || os.Getenv("TASK_LIST") == "" {
+		panic("HOST and TASK_LIST are mandatory - HOST=<your cadence host:port> TASK_LIST=<your task list>")
+	}
+
 	// Read config file into config object
 	config = os.ExpandEnv(config)
 	c := cadence.Config{}
