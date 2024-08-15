@@ -6,7 +6,14 @@ import (
 	"errors"
 	"fmt"
 	"github.com/devlibx/gox-base"
+	_ "github.com/devlibx/gox-base/config"
+	config2 "github.com/devlibx/gox-base/config"
+	"github.com/devlibx/gox-base/metrics"
+	_ "github.com/devlibx/gox-base/metrics"
 	"github.com/devlibx/gox-base/serialization"
+	stats "github.com/devlibx/gox-metrics/common"
+	_ "github.com/devlibx/gox-metrics/provider/multi"
+	_ "github.com/devlibx/gox-metrics/provider/prometheus"
 	"github.com/devlibx/gox-workfkow/workflow/framework/cadence"
 	"github.com/gin-gonic/gin"
 	"github.com/go-resty/resty/v2"
@@ -40,14 +47,19 @@ func main() {
 	time.Sleep(2 * time.Second)
 
 	// Make http call to get response
-	resp, err := resty.New().R().SetBody(requestPojo{TimeInMs: 1000}).Post("http://localhost:14567/api/v1/test")
-	if err != nil {
-		panic(err)
-	} else {
-		println(resp.String())
+	for i := 0; i < 10; i++ {
+		go func() {
+			resp, err := resty.New().R().SetBody(requestPojo{TimeInMs: 1000}).Post("http://localhost:14567/api/v1/test")
+			if err != nil {
+				panic(err)
+			} else {
+				println(resp.String())
+			}
+			time.Sleep(200 * time.Millisecond)
+		}()
 	}
 
-	time.Sleep(60 * time.Second)
+	time.Sleep(6000 * time.Second)
 }
 
 func mainServer() {
@@ -70,8 +82,13 @@ func mainServer() {
 	workflow.Register(we.getHomeDataWorkflow)
 	activity.Register(we.getHomeDataActivity)
 
+	ms, mh, err := stats.NewMetricService(&metrics.Config{Enabled: true, EnablePrometheus: true, Prefix: ""}, &config2.App{AppName: "a"})
+	if err != nil {
+		panic(err)
+	}
+
 	// Create a new cadence client
-	workflowApi, err := cadence.NewCadenceClient(gox.NewCrossFunction(), &c)
+	workflowApi, err := cadence.NewCadenceClient(gox.NewCrossFunction(ms), &c)
 	if err != nil {
 		panic(err)
 	}
@@ -85,6 +102,9 @@ func mainServer() {
 
 	// Setup Http server
 	router := gin.Default()
+	router.GET("/metrics", func(c *gin.Context) {
+		mh.MetricsReporter.HTTPHandler().ServeHTTP(c.Writer, c.Request)
+	})
 	router.POST("/api/v1/test", func(c *gin.Context) {
 
 		req := requestPojo{}
@@ -113,7 +133,7 @@ func mainServer() {
 	}()
 
 	go func() {
-		time.Sleep(20 * time.Second)
+		time.Sleep(100000 * time.Second)
 		_ = server.Shutdown(context.Background())
 	}()
 }
@@ -196,7 +216,7 @@ func (w *workflowBaseService) getHomeDataWorkflow(ctx workflow.Context, request 
 	// Simulate a retry loop - here we will get success in 2nd attempt
 	// But this will simulate a much longer workflow - but also the result is ready so the http call will not block
 	// Http call will use Query support to get the result
-	for i := 0; i < 10; i++ {
+	for i := 0; i < 2; i++ {
 		var loopResult *responsePojo
 		request.Counter = i
 		if err := workflow.ExecuteActivity(ctx, w.getHomeDataActivity, request).Get(ctx, &loopResult); err == nil {
@@ -210,7 +230,7 @@ func (w *workflowBaseService) getHomeDataWorkflow(ctx workflow.Context, request 
 // getHomeDataActivity simulates an api call to get home data - which can take time
 func (w *workflowBaseService) getHomeDataActivity(ctx context.Context, request requestPojo) (*responsePojo, error) {
 	time.Sleep(time.Duration(request.TimeInMs) * time.Millisecond)
-	if request.Counter == 5 {
+	if request.Counter > 0 {
 		return &responsePojo{Status: "ok", Counter: request.Counter}, nil
 	} else {
 		return nil, fmt.Errorf("simulated error - counter=%d", request.Counter)

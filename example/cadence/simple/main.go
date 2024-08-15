@@ -5,14 +5,20 @@ import (
 	_ "embed"
 	"fmt"
 	"github.com/devlibx/gox-base"
-	"github.com/devlibx/gox-base/errors"
+	config2 "github.com/devlibx/gox-base/config"
+	"github.com/devlibx/gox-base/metrics"
 	"github.com/devlibx/gox-base/serialization"
+	stats "github.com/devlibx/gox-metrics/common"
 	"github.com/devlibx/gox-workfkow/workflow/framework/cadence"
+	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	errors2 "github.com/pkg/errors"
 	"go.uber.org/cadence/activity"
 	"go.uber.org/cadence/client"
 	"go.uber.org/cadence/workflow"
 	"log/slog"
+	"math/rand"
+	"net/http"
 	"os"
 	"time"
 )
@@ -40,8 +46,13 @@ func main() {
 	workflow.Register(we.RunWorkflow)
 	activity.Register(we.RunActivity)
 
+	ms, mh, err := stats.NewMetricService(&metrics.Config{Enabled: true, EnablePrometheus: true, Prefix: ""}, &config2.App{AppName: "a"})
+	if err != nil {
+		panic(err)
+	}
+
 	// Create a new cadence client
-	workflowApi, err := cadence.NewCadenceClient(gox.NewCrossFunction(), &c)
+	workflowApi, err := cadence.NewCadenceClient(gox.NewCrossFunction(ms), &c)
 	if err != nil {
 		panic(err)
 	}
@@ -53,8 +64,29 @@ func main() {
 	}
 	we.cadenceApi = workflowApi
 
-	we.RunExample()
+	go func() {
+		runServer(mh)
+	}()
+
+	for i := 0; i < 100000; i++ {
+		we.RunExample()
+		time.Sleep(500 * time.Millisecond)
+	}
 	time.Sleep(60 * time.Hour)
+}
+
+func runServer(mh *stats.MetricHandler) {
+	router := gin.Default()
+	router.GET("/metrics", func(c *gin.Context) {
+		mh.MetricsReporter.HTTPHandler().ServeHTTP(c.Writer, c.Request)
+	})
+	server := &http.Server{
+		Addr:    ":14567",
+		Handler: router,
+	}
+	if err := server.ListenAndServe(); err != nil && !errors2.Is(err, http.ErrServerClosed) {
+		fmt.Printf("ListenAndServe() error: %v\n", err)
+	}
 }
 
 type workflowExample struct {
@@ -107,5 +139,9 @@ func (w *workflowExample) RunWorkflow(ctx workflow.Context, input string) error 
 
 func (w *workflowExample) RunActivity(ctx context.Context, input string) (gox.StringObjectMap, error) {
 	slog.Info("-->>>> Running activity - ", slog.String("input", input))
-	return gox.StringObjectMap{"status": "ok", "id": input}, fmt.Errorf("some bad error in printf %w", errors.New("some bad error"))
+	if rand.Int()%3 == 0 {
+		return gox.StringObjectMap{"status": "ok", "id": input}, fmt.Errorf("some bad error in printf %w", errors2.New("some bad error"))
+	} else {
+		return gox.StringObjectMap{"status": "ok", "id": input}, nil
+	}
 }

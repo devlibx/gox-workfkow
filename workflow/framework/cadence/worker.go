@@ -4,7 +4,10 @@ import (
 	"context"
 	"github.com/devlibx/gox-base"
 	"github.com/devlibx/gox-base/errors"
+	stats "github.com/devlibx/gox-metrics/common"
+	"github.com/devlibx/gox-metrics/provider/prometheus"
 	"github.com/opentracing/opentracing-go"
+	"github.com/uber-go/tally"
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 	"go.uber.org/cadence/client"
 	"go.uber.org/cadence/worker"
@@ -32,11 +35,20 @@ type cadenceWorker struct {
 	cadenceClient        client.Client
 
 	cadenceWorkers map[string]worker.Worker
+
+	tallyScope tally.Scope
 }
 
 // Start starts the Cadence client
 func (w *cadenceWorker) Start(ctx context.Context) error {
 	var err error
+
+	// See if w e can get the metric scope
+	if pm, ok := w.CrossFunction.Metric().(*prometheus.PrometheusMetrics); ok {
+		w.tallyScope = stats.TallyScopeWrapper{Scope: pm.Scope}
+	} else {
+		w.tallyScope = tally.NoopScope
+	}
 
 	if w.cadenceClient, err = w.buildCadenceClient(); err != nil {
 		return errors.Wrap(err, "failed to build cadence client - workerGroup=%s, domain=%s", w.workerGroup.Name, w.workerGroup.Domain)
@@ -61,8 +73,9 @@ func (w *cadenceWorker) Start(ctx context.Context) error {
 			w.workerGroup.Domain,
 			taskListWorker.TaskList,
 			worker.Options{
-				Tracer: opentracing.GlobalTracer(),
-				Logger: w.logger.Named("cadence-worker-" + taskListWorker.TaskList),
+				Tracer:       opentracing.GlobalTracer(),
+				MetricsScope: w.tallyScope,
+				Logger:       w.logger.Named("cadence-worker-" + taskListWorker.TaskList),
 			},
 		)
 
@@ -90,7 +103,9 @@ func (w *cadenceWorker) Shutdown(ctx context.Context, doneCh chan error) error {
 
 func (w *cadenceWorker) buildCadenceClient() (client.Client, error) {
 	if service, err := w.buildCadenceServiceClient(); err == nil {
-		return client.NewClient(service, w.workerGroup.Domain, &client.Options{}), nil
+		return client.NewClient(service, w.workerGroup.Domain, &client.Options{
+			MetricsScope: w.tallyScope,
+		}), nil
 	} else {
 		return nil, err
 	}
@@ -106,7 +121,9 @@ func (w *cadenceWorker) buildCadenceServiceClient() (workflowserviceclient.Inter
 }
 
 func (w *cadenceWorker) buildDomainClient() (client.DomainClient, error) {
-	w.cadenceDomainClient = client.NewDomainClient(w.cadenceServiceClient, &client.Options{})
+	w.cadenceDomainClient = client.NewDomainClient(w.cadenceServiceClient, &client.Options{
+		MetricsScope: w.tallyScope,
+	})
 	return w.cadenceDomainClient, nil
 }
 
