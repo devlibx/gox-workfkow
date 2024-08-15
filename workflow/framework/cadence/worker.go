@@ -10,6 +10,7 @@ import (
 	"go.uber.org/cadence/worker"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/transport/tchannel"
+	"go.uber.org/zap"
 	"sync"
 )
 
@@ -21,6 +22,7 @@ const (
 type cadenceWorker struct {
 	gox.CrossFunction
 	workerGroup *WorkerGroup
+	logger      *zap.Logger
 
 	dispatcher           *yarpc.Dispatcher
 	createDispatcherOnce *sync.Once
@@ -48,6 +50,7 @@ func (w *cadenceWorker) Start(ctx context.Context) error {
 			taskListWorker.TaskList,
 			worker.Options{
 				Tracer: opentracing.GlobalTracer(),
+				Logger: w.logger.Named("cadence-worker-" + taskListWorker.TaskList),
 			},
 		)
 

@@ -6,6 +6,8 @@ import (
 	"github.com/devlibx/gox-base/errors"
 	"go.uber.org/cadence/client"
 	"go.uber.org/cadence/workflow"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 	"log/slog"
 	"sync"
 )
@@ -14,6 +16,7 @@ type cadenceWrapperImpl struct {
 	gox.CrossFunction
 	config       *Config
 	workerGroups []*cadenceWorker
+	zapLogger    *zap.Logger
 }
 
 func (wrapper *cadenceWrapperImpl) Start(ctx context.Context, config *Config) error {
@@ -22,9 +25,21 @@ func (wrapper *cadenceWrapperImpl) Start(ctx context.Context, config *Config) er
 		return nil
 	}
 
+	// The errors in the cadence logs are not very helpful. So we are disabling ing stack trace
+	if !config.EnableErrorStackInCadenceLog && wrapper.zapLogger == nil {
+		var e error
+		c := zap.NewProductionConfig()
+		c.EncoderConfig.StacktraceKey = ""
+		c.Level = zap.NewAtomicLevelAt(zapcore.InfoLevel)
+		if wrapper.zapLogger, e = c.Build(); e != nil {
+			return errors.Wrap(e, "failed to create zap logger - stack trace is disabled in cadence log")
+		}
+	}
+
 	wrapper.workerGroups = make([]*cadenceWorker, 0)
 	for name, wg := range config.WorkerGroups {
 		wg.Name = name
+
 		if wg.Disabled {
 			slog.Warn("cadence worker group is disabled - worker group = %s", wg.Name)
 		} else {
@@ -32,6 +47,7 @@ func (wrapper *cadenceWrapperImpl) Start(ctx context.Context, config *Config) er
 				CrossFunction:        wrapper.CrossFunction,
 				createDispatcherOnce: &sync.Once{},
 				workerGroup:          &wg,
+				logger:               wrapper.zapLogger,
 			}
 			if err := worker.Start(ctx); err != nil {
 				return errors.Wrap(err, "failed to start cadence worker group - worker group = %s", wg.Name)

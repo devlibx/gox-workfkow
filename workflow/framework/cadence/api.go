@@ -9,8 +9,9 @@ import (
 
 // Config is the configuration for Cadence worker
 type Config struct {
-	Disabled     bool                   `json:"disabled" yaml:"disabled"`
-	WorkerGroups map[string]WorkerGroup `json:"worker_groups" yaml:"worker_groups"`
+	EnableErrorStackInCadenceLog bool                   `json:"enable_error_stack_in_cadence_log" yaml:"enable_error_stack_in_cadence_log"`
+	Disabled                     bool                   `json:"disabled" yaml:"disabled"`
+	WorkerGroups                 map[string]WorkerGroup `json:"worker_groups" yaml:"worker_groups"`
 }
 
 // WorkerGroup is the configuration for Cadence worker group. It allows application to use more than one cadence

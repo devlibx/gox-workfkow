@@ -2,7 +2,9 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"github.com/devlibx/gox-base"
+	"github.com/devlibx/gox-base/errors"
 	"github.com/google/uuid"
 	"go.uber.org/cadence/activity"
 	"go.uber.org/cadence/client"
@@ -43,7 +45,17 @@ func main() {
 	workflow.Register(we.RunWorkflow)
 	activity.Register(we.RunActivity)
 
-	workflowApi, err := cadence.NewCadenceClient(gox.NewNoOpCrossFunction(), &c)
+	/*// Create a custom configuration
+	config := zap.NewProductionConfig()
+	config.EncoderConfig.StacktraceKey = ""                // Disable stack trace key
+	config.Level = zap.NewAtomicLevelAt(zapcore.InfoLevel) // Set log level
+	// logger, err := zap.NewProduction()
+	logger, err := config.Build()
+	if err != nil {
+		panic(err)
+	}*/
+
+	workflowApi, err := cadence.NewCadenceClient(gox.NewCrossFunction(), &c)
 	if err != nil {
 		panic(err)
 	}
@@ -54,9 +66,12 @@ func main() {
 	}
 	we.cadenceApi = workflowApi
 
-	we.RunExample()
+	for i := 0; i < 1; i++ {
+		we.RunExample()
+		time.Sleep(10 * time.Millisecond)
+	}
 
-	time.Sleep(60 * time.Second)
+	time.Sleep(60 * time.Hour)
 }
 
 type workflowExample struct {
@@ -81,13 +96,21 @@ func (w *workflowExample) RunExample() {
 
 func (w *workflowExample) RunWorkflow(ctx workflow.Context, input string) error {
 
+	retryPolicy := &workflow.RetryPolicy{
+		InitialInterval:    time.Second, // Initial backoff interval
+		BackoffCoefficient: 2.0,         // Exponential backoff coefficient
+		MaximumAttempts:    100,         // Maximum number of attempts
+		MaximumInterval:    5 * time.Second,
+	}
+
 	registerActivityOption := workflow.ActivityOptions{
 		TaskList:               "server_2_ts_1",
-		ScheduleToCloseTimeout: 30 * time.Second,
-		ScheduleToStartTimeout: 30 * time.Second,
-		StartToCloseTimeout:    30 * time.Second,
-		HeartbeatTimeout:       10 * time.Second,
+		ScheduleToCloseTimeout: 30 * time.Minute,
+		ScheduleToStartTimeout: 30 * time.Minute,
+		StartToCloseTimeout:    30 * time.Minute,
+		HeartbeatTimeout:       10 * time.Minute,
 		WaitForCancellation:    false,
+		RetryPolicy:            retryPolicy,
 	}
 	ctx = workflow.WithActivityOptions(ctx, registerActivityOption)
 
@@ -102,5 +125,6 @@ func (w *workflowExample) RunWorkflow(ctx workflow.Context, input string) error 
 
 func (w *workflowExample) RunActivity(ctx context.Context, input string) (gox.StringObjectMap, error) {
 	slog.Info("-->>>> Running activity - ", slog.String("input", input))
-	return gox.StringObjectMap{"status": "ok", "id": input}, nil
+	return gox.StringObjectMap{"status": "ok", "id": input}, fmt.Errorf("some bad error in printf %w", errors.New("some bad error"))
+	//errors.New("some bad error")
 }
