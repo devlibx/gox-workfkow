@@ -44,6 +44,17 @@ worker_groups:
 
 ```
 
+### Using CancelWorkflow and QueryWorkflow calls (IMP)
+Since this is a wrapper of client you must pass the task list in the these calls
+```go
+// CancelWorkflow
+ctx := context.WithValue(context.Background(), cadence.TaskListForAction, "server_2_ts_1")
+err := w.cadenceApi.CancelWorkflow(ctx, "some-workflow-id")
+
+// CancelWorkflow
+ctx := context.WithValue(context.Background(), cadence.TaskListForAction, "server_2_ts_1")
+if queryResult, err := w.cadenceApi.QueryWorkflow(ctx, workflowResp.ID, workflowResp.RunID, queryType)
+````
 
 ### Working example
 ```go

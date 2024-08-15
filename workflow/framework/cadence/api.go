@@ -4,8 +4,11 @@ import (
 	"context"
 	"github.com/devlibx/gox-base"
 	"go.uber.org/cadence/client"
+	"go.uber.org/cadence/encoded"
 	"go.uber.org/cadence/workflow"
 )
+
+const TaskListForAction = "__task_list_for_action__"
 
 // Config is the configuration for Cadence worker
 type Config struct {
@@ -47,7 +50,22 @@ type Api interface {
 	StartWorkflow(ctx context.Context, options client.StartWorkflowOptions, workflowFunc interface{}, args ...interface{}) (*workflow.Execution, error)
 
 	// CancelWorkflow cancels a workflow execution
+	//
+	// IMPORTANT REQUIREMENT:
+	// Since this is a cadence wrapper, you will have to pass the task list name to perform the action.
+	//
+	// e.g.
+	// ctx := context.WithValue(context.Background(), cadence.TaskListForAction, "server_2_ts_1")
 	CancelWorkflow(ctx context.Context, workflowID string, runID string) error
+
+	// QueryWorkflow queries a workflow execution
+	//
+	// IMPORTANT REQUIREMENT:
+	// Since this is a cadence wrapper, you will have to pass the task list name to perform the action.
+	//
+	// e.g.
+	// ctx := context.WithValue(context.Background(), cadence.TaskListForAction, "server_2_ts_1")
+	QueryWorkflow(ctx context.Context, workflowID string, runID string, queryType string, args ...interface{}) (encoded.Value, error)
 }
 
 func NewCadenceClient(cf gox.CrossFunction, config *Config) (Api, error) {

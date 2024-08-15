@@ -5,6 +5,7 @@ import (
 	"github.com/devlibx/gox-base"
 	"github.com/devlibx/gox-base/errors"
 	"go.uber.org/cadence/client"
+	"go.uber.org/cadence/encoded"
 	"go.uber.org/cadence/workflow"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -85,5 +86,33 @@ func (wrapper *cadenceWrapperImpl) StartWorkflow(ctx context.Context, options cl
 }
 
 func (wrapper *cadenceWrapperImpl) CancelWorkflow(ctx context.Context, workflowID string, runID string) error {
-	return errors.New("not implemented")
+	if ctx.Value(TaskListForAction) == nil {
+		return errors.New("please set task list name in context parameter - set task list name with key: %s", TaskListForAction)
+	} else if _, ok := ctx.Value(TaskListForAction).(string); !ok {
+		return errors.New("please set task list name as string in context parameter - set task list name with key: %s", TaskListForAction)
+	}
+
+	taskList := ctx.Value(TaskListForAction).(string)
+	for _, cadenceWorkerObj := range wrapper.workerGroups {
+		if _, ok := cadenceWorkerObj.cadenceWorkers[taskList]; ok {
+			return cadenceWorkerObj.cadenceClient.CancelWorkflow(ctx, workflowID, runID)
+		}
+	}
+	return errors.New("task list not registered in application config to run this workflow: %s", taskList)
+}
+
+func (wrapper *cadenceWrapperImpl) QueryWorkflow(ctx context.Context, workflowID string, runID string, queryType string, args ...interface{}) (encoded.Value, error) {
+	if ctx.Value(TaskListForAction) == nil {
+		return nil, errors.New("please set task list name in context parameter - set task list name with key: %s", TaskListForAction)
+	} else if _, ok := ctx.Value(TaskListForAction).(string); !ok {
+		return nil, errors.New("please set task list name as string in context parameter - set task list name with key: %s", TaskListForAction)
+	}
+
+	taskList := ctx.Value(TaskListForAction).(string)
+	for _, cadenceWorkerObj := range wrapper.workerGroups {
+		if _, ok := cadenceWorkerObj.cadenceWorkers[taskList]; ok {
+			return cadenceWorkerObj.cadenceClient.QueryWorkflow(ctx, workflowID, runID, queryType, args...)
+		}
+	}
+	return nil, errors.New("task list not registered in application config to run this workflow: %s", taskList)
 }
