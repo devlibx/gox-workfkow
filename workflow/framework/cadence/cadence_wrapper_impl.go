@@ -86,13 +86,11 @@ func (wrapper *cadenceWrapperImpl) StartWorkflow(ctx context.Context, options cl
 }
 
 func (wrapper *cadenceWrapperImpl) CancelWorkflow(ctx context.Context, workflowID string, runID string) error {
-	if ctx.Value(TaskListForAction) == nil {
-		return errors.New("please set task list name in context parameter - set task list name with key: %s", TaskListForAction)
-	} else if _, ok := ctx.Value(TaskListForAction).(string); !ok {
-		return errors.New("please set task list name as string in context parameter - set task list name with key: %s", TaskListForAction)
+	taskList, err := wrapper.getTaskListFromContext(ctx)
+	if err != nil {
+		return err
 	}
 
-	taskList := ctx.Value(TaskListForAction).(string)
 	for _, cadenceWorkerObj := range wrapper.workerGroups {
 		if _, ok := cadenceWorkerObj.cadenceWorkers[taskList]; ok {
 			return cadenceWorkerObj.cadenceClient.CancelWorkflow(ctx, workflowID, runID)
@@ -102,17 +100,38 @@ func (wrapper *cadenceWrapperImpl) CancelWorkflow(ctx context.Context, workflowI
 }
 
 func (wrapper *cadenceWrapperImpl) QueryWorkflow(ctx context.Context, workflowID string, runID string, queryType string, args ...interface{}) (encoded.Value, error) {
-	if ctx.Value(TaskListForAction) == nil {
-		return nil, errors.New("please set task list name in context parameter - set task list name with key: %s", TaskListForAction)
-	} else if _, ok := ctx.Value(TaskListForAction).(string); !ok {
-		return nil, errors.New("please set task list name as string in context parameter - set task list name with key: %s", TaskListForAction)
+	taskList, err := wrapper.getTaskListFromContext(ctx)
+	if err != nil {
+		return nil, err
 	}
 
-	taskList := ctx.Value(TaskListForAction).(string)
 	for _, cadenceWorkerObj := range wrapper.workerGroups {
 		if _, ok := cadenceWorkerObj.cadenceWorkers[taskList]; ok {
 			return cadenceWorkerObj.cadenceClient.QueryWorkflow(ctx, workflowID, runID, queryType, args...)
 		}
 	}
 	return nil, errors.New("task list not registered in application config to run this workflow: %s", taskList)
+}
+
+func (wrapper *cadenceWrapperImpl) TerminateWorkflow(ctx context.Context, workflowID string, runID string, reason string, details []byte) error {
+	taskList, err := wrapper.getTaskListFromContext(ctx)
+	if err != nil {
+		return err
+	}
+
+	for _, cadenceWorkerObj := range wrapper.workerGroups {
+		if _, ok := cadenceWorkerObj.cadenceWorkers[taskList]; ok {
+			return cadenceWorkerObj.cadenceClient.TerminateWorkflow(ctx, workflowID, runID, reason, details)
+		}
+	}
+	return errors.New("task list not registered in application config to run this workflow: %s", taskList)
+}
+
+func (wrapper *cadenceWrapperImpl) getTaskListFromContext(ctx context.Context) (string, error) {
+	if ctx.Value(TaskListForAction) == nil {
+		return "", errors.New("please set task list name in context parameter - set task list name with key: %s", TaskListForAction)
+	} else if _, ok := ctx.Value(TaskListForAction).(string); !ok {
+		return "", errors.New("please set task list name as string in context parameter - set task list name with key: %s", TaskListForAction)
+	}
+	return ctx.Value(TaskListForAction).(string), nil
 }

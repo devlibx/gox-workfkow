@@ -66,6 +66,15 @@ type Api interface {
 	// e.g.
 	// ctx := context.WithValue(context.Background(), cadence.TaskListForAction, "server_2_ts_1")
 	QueryWorkflow(ctx context.Context, workflowID string, runID string, queryType string, args ...interface{}) (encoded.Value, error)
+
+	// TerminateWorkflow queries a workflow execution
+	//
+	// IMPORTANT REQUIREMENT:
+	// Since this is a cadence wrapper, you will have to pass the task list name to perform the action.
+	//
+	// e.g.
+	// ctx := context.WithValue(context.Background(), cadence.TaskListForAction, "server_2_ts_1")
+	TerminateWorkflow(ctx context.Context, workflowID string, runID string, reason string, details []byte) error
 }
 
 func NewCadenceClient(cf gox.CrossFunction, config *Config) (Api, error) {
