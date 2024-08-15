@@ -11,6 +11,7 @@ import (
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/transport/tchannel"
 	"go.uber.org/zap"
+	"log/slog"
 	"sync"
 )
 
@@ -27,6 +28,7 @@ type cadenceWorker struct {
 	dispatcher           *yarpc.Dispatcher
 	createDispatcherOnce *sync.Once
 	cadenceServiceClient workflowserviceclient.Interface
+	cadenceDomainClient  client.DomainClient
 	cadenceClient        client.Client
 
 	cadenceWorkers map[string]worker.Worker
@@ -38,6 +40,16 @@ func (w *cadenceWorker) Start(ctx context.Context) error {
 
 	if w.cadenceClient, err = w.buildCadenceClient(); err != nil {
 		return errors.Wrap(err, "failed to build cadence client - workerGroup=%s, domain=%s", w.workerGroup.Name, w.workerGroup.Domain)
+	}
+
+	if w.cadenceDomainClient, err = w.buildDomainClient(); err != nil {
+		return errors.Wrap(err, "failed to build domain client - workerGroup=%s, domain=%s", w.workerGroup.Name, w.workerGroup.Domain)
+	}
+
+	if domainInfo, err := w.cadenceDomainClient.Describe(context.Background(), w.workerGroup.Domain); err != nil {
+		return errors.Wrap(err, "failed to describe domain (check if it exists) - workerGroup=%s, domain=%s", w.workerGroup.Name, w.workerGroup.Domain)
+	} else {
+		slog.Info("Cadence domain info", slog.String("domain", w.workerGroup.Domain), slog.Any("domainInfo", domainInfo))
 	}
 
 	w.cadenceWorkers = make(map[string]worker.Worker)
@@ -91,6 +103,11 @@ func (w *cadenceWorker) buildCadenceServiceClient() (workflowserviceclient.Inter
 	} else {
 		return nil, errors.Wrap(err, "failed to build and start dispatcher")
 	}
+}
+
+func (w *cadenceWorker) buildDomainClient() (client.DomainClient, error) {
+	w.cadenceDomainClient = client.NewDomainClient(w.cadenceServiceClient, &client.Options{})
+	return w.cadenceDomainClient, nil
 }
 
 // NewWorker creates a new dispatcher and also starts it
