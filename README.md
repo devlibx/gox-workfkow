@@ -43,33 +43,7 @@ worker_groups:
       worker_count: 3
 
 ```
-
-### Using CancelWorkflow and QueryWorkflow calls (IMP)
-Since this is a wrapper of client you must pass the task list in the these calls
-```go
-// CancelWorkflow
-ctx := context.WithValue(context.Background(), cadence.TaskListForAction, "server_2_ts_1")
-err := w.cadenceApi.CancelWorkflow(ctx, "some-workflow-id")
-
-// CancelWorkflow
-ctx := context.WithValue(context.Background(), cadence.TaskListForAction, "server_2_ts_1")
-if queryResult, err := w.cadenceApi.QueryWorkflow(ctx, workflowResp.ID, workflowResp.RunID, queryType)
-````
-
-### Using uber.Fx
-```go
-// What are the dependency
-// gox.CorssFunction =  use no-op CorssFunction using this if needed gox.NewNoOpCrossFunction
-// cadence.Config = configuration for cadence from this module
-
-app := fx.New(
-    ...
-    fx.Provide(cadence.NewCadenceClient),
-
-    ... Add this as last invoker - we want it to start at the end so that workflows and activity are registered before this
-    fx.Invoke(cadence.NewCadenceWorkflowApiInvokerAtBoot),
-)
-```
+---
 
 ### Working example
 ```go
@@ -185,3 +159,34 @@ func (w *workflowExample) RunActivity(ctx context.Context, input string) (gox.St
 	return gox.StringObjectMap{"status": "ok", "id": input}, nil
 }
 ```
+---
+
+##### Using CancelWorkflow and QueryWorkflow calls (Important)
+Since this is a wrapper of client you must pass the task list in the these calls
+```go
+// CancelWorkflow
+ctx := context.WithValue(context.Background(), cadence.TaskListForAction, "server_2_ts_1")
+err := w.cadenceApi.CancelWorkflow(ctx, "some-workflow-id")
+
+// CancelWorkflow
+ctx := context.WithValue(context.Background(), cadence.TaskListForAction, "server_2_ts_1")
+if queryResult, err := w.cadenceApi.QueryWorkflow(ctx, workflowResp.ID, workflowResp.RunID, queryType)
+````
+---
+
+### Using uber.Fx
+```go
+// What are the dependency
+// gox.CorssFunction =  use no-op CorssFunction using this if needed gox.NewNoOpCrossFunction
+// cadence.Config = configuration for cadence from this module
+
+app := fx.New(
+    ...
+    fx.Provide(cadence.NewCadenceClient),
+
+    ... Add this as last invoker - we want it to start at the end so that workflows and activity are registered before this
+    fx.Invoke(cadence.NewCadenceWorkflowApiInvokerAtBoot),
+)
+```
+
+
