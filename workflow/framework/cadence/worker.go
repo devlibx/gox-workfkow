@@ -98,6 +98,11 @@ func (w *cadenceWorker) Shutdown(ctx context.Context, doneCh chan error) error {
 		close(doneCh)
 	}()
 
+	for taskList, cadenceWorkerObj := range w.cadenceWorkers {
+		cadenceWorkerObj.Stop()
+		slog.Info("cadence worker stopped...", slog.String("taskList", taskList))
+	}
+
 	return nil
 }
 

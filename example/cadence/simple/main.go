@@ -57,8 +57,11 @@ func main() {
 		panic(err)
 	}
 
+	appCts, cff := context.WithTimeout(context.Background(), 10*time.Hour)
+	defer cff()
+
 	// Make sure to start it - mandatory to do it
-	err = workflowApi.Start(context.Background())
+	err = workflowApi.Start(appCts)
 	if err != nil {
 		panic(err)
 	}
@@ -68,10 +71,11 @@ func main() {
 		runServer(mh)
 	}()
 
-	for i := 0; i < 100000; i++ {
+	for i := 0; i < 2; i++ {
 		we.RunExample()
 		time.Sleep(500 * time.Millisecond)
 	}
+
 	time.Sleep(60 * time.Hour)
 }
 

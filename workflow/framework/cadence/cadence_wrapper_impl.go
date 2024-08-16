@@ -18,9 +18,22 @@ type cadenceWrapperImpl struct {
 	config       *Config
 	workerGroups []*cadenceWorker
 	zapLogger    *zap.Logger
+
+	shoutDownOnce *sync.Once
 }
 
 func (wrapper *cadenceWrapperImpl) Start(ctx context.Context) error {
+	wrapper.shoutDownOnce = &sync.Once{}
+
+	// Make sure if context is done then we stop the = client can create and have an application
+	// level context so that it can clean all resources at one
+	go func() {
+		<-ctx.Done()
+		if ch, err := wrapper.Shutdown(ctx); err != nil {
+			<-ch
+		}
+	}()
+
 	if wrapper.config.Disabled {
 		slog.Warn("cadence is disabled - will not start any worker")
 		return nil
@@ -56,6 +69,7 @@ func (wrapper *cadenceWrapperImpl) Start(ctx context.Context) error {
 			wrapper.workerGroups = append(wrapper.workerGroups, worker)
 		}
 	}
+
 	return nil
 }
 
@@ -66,12 +80,14 @@ func (wrapper *cadenceWrapperImpl) Shutdown(ctx context.Context) (chan error, er
 		close(doneCh)
 	}()
 
-	for _, cadenceWorkerObj := range wrapper.workerGroups {
-		ch := make(chan error, 2)
-		if err := cadenceWorkerObj.Shutdown(ctx, ch); err == nil {
-			<-ch
+	wrapper.shoutDownOnce.Do(func() {
+		for _, cadenceWorkerObj := range wrapper.workerGroups {
+			ch := make(chan error, 2)
+			if err := cadenceWorkerObj.Shutdown(ctx, ch); err == nil {
+				<-ch
+			}
 		}
-	}
+	})
 
 	return doneCh, nil
 }
