@@ -12,6 +12,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/uber-go/tally v3.4.0+incompatible
 	go.uber.org/cadence v1.2.9
+	go.uber.org/fx v1.20.1
 	go.uber.org/yarpc v1.55.0
 	go.uber.org/zap v1.23.0
 )
@@ -86,6 +87,7 @@ require (
 	github.com/ugorji/go/codec v1.2.11 // indirect
 	github.com/yusufpapurcu/wmi v1.2.3 // indirect
 	go.uber.org/atomic v1.11.0 // indirect
+	go.uber.org/dig v1.17.0 // indirect
 	go.uber.org/multierr v1.6.0 // indirect
 	go.uber.org/net/metrics v1.3.0 // indirect
 	go.uber.org/thriftrw v1.25.0 // indirect

@@ -56,6 +56,21 @@ ctx := context.WithValue(context.Background(), cadence.TaskListForAction, "serve
 if queryResult, err := w.cadenceApi.QueryWorkflow(ctx, workflowResp.ID, workflowResp.RunID, queryType)
 ````
 
+### Using uber.Fx
+```go
+// What are the dependency
+// gox.CorssFunction =  use no-op CorssFunction using this if needed gox.NewNoOpCrossFunction
+// cadence.Config = configuration for cadence from this module
+
+app := fx.New(
+    ...
+    fx.Provide(cadence.NewCadenceClient),
+
+    ... Add this as last invoker - we want it to start at the end so that workflows and activity are registered before this
+    fx.Invoke(cadence.NewCadenceWorkflowApiInvokerAtBoot),
+)
+```
+
 ### Working example
 ```go
 package main
