@@ -1,7 +1,7 @@
 package cadence
 
 import (
-	"github.com/devlibx/gox-base/errors"
+	"github.com/devlibx/gox-base/v2/errors"
 )
 
 func (c *Config) Validate() error {

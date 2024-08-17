@@ -3,8 +3,8 @@ module github.com/devlibx/gox-workfkow
 go 1.21
 
 require (
-	github.com/devlibx/gox-base v0.0.142
-	github.com/devlibx/gox-metrics v0.0.20
+	github.com/devlibx/gox-base/v2 v2.0.1
+	github.com/devlibx/gox-metrics/v2 v2.0.25
 	github.com/gin-gonic/gin v1.9.1
 	github.com/go-resty/resty/v2 v2.7.0
 	github.com/google/uuid v1.3.1
@@ -36,6 +36,7 @@ require (
 	github.com/chenzhuoyu/base64x v0.0.0-20230717121745-296ad89f973d // indirect
 	github.com/chenzhuoyu/iasm v0.9.0 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
+	github.com/devlibx/gox-base v0.0.111 // indirect
 	github.com/devlibx/gox-http v0.0.79 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/ebitengine/purego v0.5.0 // indirect

@@ -2,10 +2,10 @@ package cadence
 
 import (
 	"context"
-	"github.com/devlibx/gox-base"
-	"github.com/devlibx/gox-base/errors"
-	stats "github.com/devlibx/gox-metrics/common"
-	"github.com/devlibx/gox-metrics/provider/prometheus"
+	"github.com/devlibx/gox-base/v2"
+	"github.com/devlibx/gox-base/v2/errors"
+	stats "github.com/devlibx/gox-metrics/v2/common"
+	"github.com/devlibx/gox-metrics/v2/provider/prometheus"
 	"github.com/opentracing/opentracing-go"
 	"github.com/uber-go/tally"
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"

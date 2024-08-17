@@ -2,8 +2,8 @@ package cadence
 
 import (
 	"context"
-	"github.com/devlibx/gox-base"
-	"github.com/devlibx/gox-base/errors"
+	"github.com/devlibx/gox-base/v2"
+	"github.com/devlibx/gox-base/v2/errors"
 	"go.uber.org/cadence/client"
 	"go.uber.org/cadence/encoded"
 	"go.uber.org/cadence/workflow"
