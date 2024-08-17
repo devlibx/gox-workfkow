@@ -81,6 +81,10 @@ type Api interface {
 }
 
 func NewCadenceClient(cf gox.CrossFunction, config *Config) (Api, error) {
+	if config.Disabled {
+		return &noOpCadenceApi{}, nil
+	}
+
 	impl := &cadenceWrapperImpl{
 		CrossFunction: cf,
 		config:        config,
