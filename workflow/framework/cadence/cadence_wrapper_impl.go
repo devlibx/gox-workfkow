@@ -29,7 +29,7 @@ func (wrapper *cadenceWrapperImpl) Start(ctx context.Context) error {
 	// level context so that it can clean all resources at one
 	go func() {
 		<-ctx.Done()
-		if ch, err := wrapper.Shutdown(ctx); err != nil {
+		if ch, err := wrapper.Shutdown(ctx); err == nil {
 			<-ch
 		}
 	}()
