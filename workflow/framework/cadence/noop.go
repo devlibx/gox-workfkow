@@ -3,15 +3,18 @@ package cadence
 import (
 	"context"
 	"github.com/devlibx/gox-base/v2/errors"
+	"github.com/google/uuid"
 	"go.uber.org/cadence/client"
 	"go.uber.org/cadence/encoded"
 	"go.uber.org/cadence/workflow"
+	"log/slog"
 )
 
 type noOpCadenceApi struct {
 }
 
 func (n noOpCadenceApi) Start(ctx context.Context) error {
+	slog.Warn("************** Using NO OP IMPL for Cadence - Start ************** ")
 	return nil
 }
 
@@ -23,7 +26,11 @@ func (n noOpCadenceApi) Shutdown(ctx context.Context) (chan error, error) {
 }
 
 func (n noOpCadenceApi) StartWorkflow(ctx context.Context, options client.StartWorkflowOptions, workflowFunc interface{}, args ...interface{}) (*workflow.Execution, error) {
-	return nil, errors.New("cannot start workflow - no op cadence api implementation")
+	slog.Warn("************** Using NO OP IMPL for Cadence - StartWorkflow ************** ")
+	return &workflow.Execution{
+		ID:    uuid.NewString() + "-NO-OP_IMPL",
+		RunID: uuid.NewString() + "-NO-OP_IMPL",
+	}, nil
 }
 
 func (n noOpCadenceApi) ExecuteWorkflow(ctx context.Context, options client.StartWorkflowOptions, workflow interface{}, args ...interface{}) (client.WorkflowRun, error) {
