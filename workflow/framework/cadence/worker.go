@@ -34,7 +34,7 @@ type cadenceWorker struct {
 	cadenceDomainClient  client.DomainClient
 	cadenceClient        client.Client
 
-	cadenceWorkers map[string]worker.Worker
+	cadenceWorkers map[string][]worker.Worker
 
 	tallyScope tally.Scope
 }
@@ -64,26 +64,29 @@ func (w *cadenceWorker) Start(ctx context.Context) error {
 		slog.Info("Cadence domain info", slog.String("domain", w.workerGroup.Domain), slog.Any("domainInfo", domainInfo))
 	}
 
-	w.cadenceWorkers = make(map[string]worker.Worker)
+	w.cadenceWorkers = make(map[string][]worker.Worker)
 
 	// It's time to start the workers for each task list
 	for _, taskListWorker := range w.workerGroup.Workers {
-		cw := worker.New(
-			w.cadenceServiceClient,
-			w.workerGroup.Domain,
-			taskListWorker.TaskList,
-			worker.Options{
-				Tracer:       opentracing.GlobalTracer(),
-				MetricsScope: w.tallyScope,
-				Logger:       w.logger.Named("cadence-worker-" + taskListWorker.TaskList),
-			},
-		)
+		w.cadenceWorkers[taskListWorker.TaskList] = make([]worker.Worker, 0)
+		for i := 0; i < taskListWorker.WorkerCount; i++ {
+			cw := worker.New(
+				w.cadenceServiceClient,
+				w.workerGroup.Domain,
+				taskListWorker.TaskList,
+				worker.Options{
+					Tracer:       opentracing.GlobalTracer(),
+					MetricsScope: w.tallyScope,
+					Logger:       w.logger.Named("cadence-worker-" + taskListWorker.TaskList),
+				},
+			)
 
-		// Keep the worker reference - used in stopping the worker
-		w.cadenceWorkers[taskListWorker.TaskList] = cw
+			// Keep the worker reference - used in stopping the worker
+			w.cadenceWorkers[taskListWorker.TaskList] = append(w.cadenceWorkers[taskListWorker.TaskList], cw)
 
-		if err := cw.Start(); err != nil {
-			return errors.Wrap(err, "failed to start worker for taskList=%s", taskListWorker.TaskList)
+			if err := cw.Start(); err != nil {
+				return errors.Wrap(err, "failed to start worker for taskList=%s", taskListWorker.TaskList)
+			}
 		}
 	}
 
@@ -99,8 +102,10 @@ func (w *cadenceWorker) Shutdown(ctx context.Context, doneCh chan error) error {
 	}()
 
 	for taskList, cadenceWorkerObj := range w.cadenceWorkers {
-		cadenceWorkerObj.Stop()
-		slog.Info("cadence worker stopped...", slog.String("taskList", taskList))
+		for _, workerObj := range cadenceWorkerObj {
+			workerObj.Stop()
+			slog.Info("cadence worker stopped...", slog.String("taskList", taskList))
+		}
 	}
 
 	return nil
