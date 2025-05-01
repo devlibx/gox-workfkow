@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/devlibx/gox-base/v2/errors"
 	"github.com/google/uuid"
+	"go.uber.org/cadence/.gen/go/shared"
 	"go.uber.org/cadence/client"
 	"go.uber.org/cadence/encoded"
 	"go.uber.org/cadence/workflow"
@@ -47,4 +48,8 @@ func (n noOpCadenceApi) QueryWorkflow(ctx context.Context, workflowID string, ru
 
 func (n noOpCadenceApi) TerminateWorkflow(ctx context.Context, workflowID string, runID string, reason string, details []byte) error {
 	return nil
+}
+
+func (n noOpCadenceApi) DescribeWorkflowExecution(ctx context.Context, workflowID string, runID string) (*shared.DescribeWorkflowExecutionResponse, error) {
+	return nil, errors.New("no op cadence api implementation")
 }

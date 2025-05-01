@@ -3,6 +3,7 @@ package cadence
 import (
 	"context"
 	"github.com/devlibx/gox-base/v2"
+	"go.uber.org/cadence/.gen/go/shared"
 	"go.uber.org/cadence/client"
 	"go.uber.org/cadence/encoded"
 	"go.uber.org/cadence/workflow"
@@ -78,6 +79,8 @@ type Api interface {
 	// e.g.
 	// ctx := context.WithValue(context.Background(), cadence.TaskListForAction, "server_2_ts_1")
 	TerminateWorkflow(ctx context.Context, workflowID string, runID string, reason string, details []byte) error
+
+	DescribeWorkflowExecution(ctx context.Context, workflowID string, runID string) (*shared.DescribeWorkflowExecutionResponse, error)
 }
 
 func NewCadenceClient(cf gox.CrossFunction, config *Config) (Api, error) {
@@ -93,4 +96,8 @@ func NewCadenceClient(cf gox.CrossFunction, config *Config) (Api, error) {
 		return nil, err
 	}
 	return impl, nil
+}
+
+func ContextWithTaskListInfo(ctx context.Context, taskList string) context.Context {
+	return context.WithValue(ctx, TaskListForAction, taskList)
 }

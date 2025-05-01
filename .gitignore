@@ -5,3 +5,7 @@ vendor/
 
 # Go Dependency Management Tool
 go.sum
+
+example/cadence/status/config.yaml
+example/cadence/status/ids.txt
+example/cadence/status/main.go

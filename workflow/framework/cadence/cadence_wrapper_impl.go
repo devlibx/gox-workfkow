@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/devlibx/gox-base/v2"
 	"github.com/devlibx/gox-base/v2/errors"
+	"go.uber.org/cadence/.gen/go/shared"
 	"go.uber.org/cadence/client"
 	"go.uber.org/cadence/encoded"
 	"go.uber.org/cadence/workflow"
@@ -150,6 +151,20 @@ func (wrapper *cadenceWrapperImpl) TerminateWorkflow(ctx context.Context, workfl
 		}
 	}
 	return errors.New("task list not registered in application config to run this workflow: %s", taskList)
+}
+
+func (wrapper *cadenceWrapperImpl) DescribeWorkflowExecution(ctx context.Context, workflowID string, runID string) (*shared.DescribeWorkflowExecutionResponse, error) {
+	taskList, err := wrapper.getTaskListFromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, cadenceWorkerObj := range wrapper.workerGroups {
+		if _, ok := cadenceWorkerObj.cadenceWorkers[taskList]; ok {
+			return cadenceWorkerObj.cadenceClient.DescribeWorkflowExecution(ctx, workflowID, runID)
+		}
+	}
+	return nil, errors.New("task list not registered in application config to run this workflow: %s", taskList)
 }
 
 func (wrapper *cadenceWrapperImpl) getTaskListFromContext(ctx context.Context) (string, error) {
