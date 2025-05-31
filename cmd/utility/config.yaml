@@ -1,0 +1,8 @@
+worker_groups:
+  worker_group_1:
+    domain: ${DOMAIN}
+    host_port: ${HOST}
+    name: server_1
+    worker:
+      - task_list: ${TASK_LIST}
+        worker_count: 3
