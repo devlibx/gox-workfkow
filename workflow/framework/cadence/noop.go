@@ -2,16 +2,21 @@ package cadence
 
 import (
 	"context"
+	"log/slog"
+
 	"github.com/devlibx/gox-base/v2/errors"
 	"github.com/google/uuid"
 	"go.uber.org/cadence/.gen/go/shared"
 	"go.uber.org/cadence/client"
 	"go.uber.org/cadence/encoded"
 	"go.uber.org/cadence/workflow"
-	"log/slog"
 )
 
 type noOpCadenceApi struct {
+}
+
+func (n noOpCadenceApi) SignalWorkflow(ctx context.Context, workflowID string, runID string, signalName string, arg interface{}) error {
+	return nil
 }
 
 func (n noOpCadenceApi) Start(ctx context.Context) error {

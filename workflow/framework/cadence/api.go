@@ -2,6 +2,7 @@ package cadence
 
 import (
 	"context"
+
 	"github.com/devlibx/gox-base/v2"
 	"go.uber.org/cadence/.gen/go/shared"
 	"go.uber.org/cadence/client"
@@ -81,6 +82,8 @@ type Api interface {
 	TerminateWorkflow(ctx context.Context, workflowID string, runID string, reason string, details []byte) error
 
 	DescribeWorkflowExecution(ctx context.Context, workflowID string, runID string) (*shared.DescribeWorkflowExecutionResponse, error)
+
+	SignalWorkflow(ctx context.Context, workflowID string, runID string, signalName string, arg interface{}) error
 }
 
 func NewCadenceClient(cf gox.CrossFunction, config *Config) (Api, error) {

@@ -2,6 +2,9 @@ package cadence
 
 import (
 	"context"
+	"log/slog"
+	"sync"
+
 	"github.com/devlibx/gox-base/v2"
 	"github.com/devlibx/gox-base/v2/errors"
 	"go.uber.org/cadence/.gen/go/shared"
@@ -10,8 +13,6 @@ import (
 	"go.uber.org/cadence/workflow"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
-	"log/slog"
-	"sync"
 )
 
 type cadenceWrapperImpl struct {
@@ -56,7 +57,7 @@ func (wrapper *cadenceWrapperImpl) Start(ctx context.Context) error {
 		wg.Name = name
 
 		if wg.Disabled {
-			slog.Warn("cadence worker group is disabled - worker group = %s", wg.Name)
+			slog.Warn("cadence worker group is disabled", slog.String("worker group", wg.Name))
 		} else {
 			worker := &cadenceWorker{
 				CrossFunction:        wrapper.CrossFunction,
@@ -174,4 +175,18 @@ func (wrapper *cadenceWrapperImpl) getTaskListFromContext(ctx context.Context) (
 		return "", errors.New("please set task list name as string in context parameter - set task list name with key: %s", TaskListForAction)
 	}
 	return ctx.Value(TaskListForAction).(string), nil
+}
+
+func (wrapper *cadenceWrapperImpl) SignalWorkflow(ctx context.Context, workflowID string, runID string, signalName string, arg interface{}) error {
+	taskList, err := wrapper.getTaskListFromContext(ctx)
+	if err != nil {
+		return err
+	}
+
+	for _, cadenceWorkerObj := range wrapper.workerGroups {
+		if _, ok := cadenceWorkerObj.cadenceWorkers[taskList]; ok {
+			return cadenceWorkerObj.cadenceClient.SignalWorkflow(ctx, workflowID, runID, signalName, arg)
+		}
+	}
+	return errors.New("task list not registered in application config to run this workflow: %s", taskList)
 }
